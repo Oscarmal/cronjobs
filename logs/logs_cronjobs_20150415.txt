@@ -13,3 +13,33 @@ Tarea iniciada: 2015-04-15 12:16:06
 Respuesta: Ejecutado OK: 2015-04-15 12:16:09
 Tarea finalizada: 2015-04-15 12:16:09
 -------
+2015-04-15 12:24:49 -> ID_CRONJOB: 1 | NOMBRE: test | ARCHIVO: cron/test/test.php
+Tarea iniciada: 2015-04-15 12:24:46
+Respuesta: Ejecutado OK: 2015-04-15 12:24:49
+Tarea finalizada: 2015-04-15 12:24:49
+-------
+2015-04-15 12:24:50 -> ID_CRONJOB: 2 | NOMBRE: backup_db_mysql | ARCHIVO: cron/test/backup_mysql.sh
+Tarea iniciada: 2015-04-15 12:24:50
+Respuesta: Error al ejecutar comando: <sh cron/test/backup_mysql.sh>
+Tarea finalizada: 2015-04-15 12:24:50
+-------
+2015-04-15 12:24:53 -> ID_CRONJOB: 3 | NOMBRE: backup_db_mysql | ARCHIVO: cron/test/backup_mysql.sh
+Tarea iniciada: 2015-04-15 12:24:50
+Respuesta: Ejecutado OK: 2015-04-15 12:24:53
+Tarea finalizada: 2015-04-15 12:24:53
+-------
+2015-04-15 12:26:07 -> ID_CRONJOB: 1 | NOMBRE: test | ARCHIVO: cron/test/test.php
+Tarea iniciada: 2015-04-15 12:26:04
+Respuesta: Ejecutado OK: 2015-04-15 12:26:07
+Tarea finalizada: 2015-04-15 12:26:07
+-------
+2015-04-15 12:26:07 -> ID_CRONJOB: 2 | NOMBRE: backup_db_mysql | ARCHIVO: cron/test/backup_mysql.sh
+Tarea iniciada: 2015-04-15 12:26:07
+Respuesta: Error al ejecutar comando: <sh cron/test/backup_mysql.sh>
+Tarea finalizada: 2015-04-15 12:26:07
+-------
+2015-04-15 12:26:10 -> ID_CRONJOB: 3 | NOMBRE: backup_db_mysql | ARCHIVO: cron/test/backup_mysql.sh
+Tarea iniciada: 2015-04-15 12:26:07
+Respuesta: Ejecutado OK: 2015-04-15 12:26:10
+Tarea finalizada: 2015-04-15 12:26:10
+-------

@@ -25,9 +25,7 @@ switch (strtolower($v_a)) {
 		echo table_cron_tareas();
 		break;
 	case 'exe':
-		echo utf8_decode("Modo de ejecición")."<br/>";
 		execute_cron_tareas();
-		// execute_cronjob(1);
 		break;	
 	default:
 		echo utf8_decode("Sin autorización");
@@ -95,7 +93,8 @@ function execute_cron_tareas(){
 		$exe_cron = execute_cronjob($data[0]);
 		if($soloUno) break;		
 	}
-	return true;
+	$respuesta = utf8_decode("Modo de ejecución").date("Y-m-d H:i:s");
+	return $respuesta;
 }
 
 function execute_cronjob($id_cronjob=false){
