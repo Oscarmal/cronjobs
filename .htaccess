@@ -1,0 +1,9 @@
+#Protección de acceso con .htaccess
+#order allow,deny
+#deny from all
+#Impide listao de directorios
+Options -Indexes
+#Orden de ejecucion
+DirectoryIndex index.php index.html index.htm
+#Compresion de CSS, JS, XML y TXT
+AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/x-javascript
