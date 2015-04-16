@@ -139,7 +139,8 @@ function execute_cronjob($id_cronjob=false){
 		default: unset($ejecuta); break;
 	}	
 	// Verifica vigencia del cronjob
-	$sqlData = array(id_cronjob => $data[id_cronjob]);
+/*TODO: revisar estatus EJECUTANDO */
+	$sqlData = array(id_cronjob => $data[id_cronjob], estatus => 'TERMINADO');
 	$dataCron = sql_select_verifica_cron($sqlData);
 	if($dataCron[cron_iniciado] && $dataCron[cron_vigente] && $dataCron[excedido_minutos]>=$parms[cron_excede]){
 		// Comienza ejecución
@@ -248,7 +249,9 @@ function sql_update_cron_logs($data=array()){
 function sql_select_verifica_cron($data=array()){
 // Listado de tabla cron_tareas
 	$id_cronjob = $data[id_cronjob];
+	$estatus = $data[estatus];
 	$filtro .= ($id_cronjob)?" AND b.id_cronjob='$id_cronjob'":'';
+	$filtro .= ($estatus)?" AND a.estatus='$estatus'":'';
 	$sql = "SELECT 
 				 a.id_cron_log
 				,b.id_cronjob
@@ -318,7 +321,7 @@ function sql_select_verifica_cron($data=array()){
 				,b.activo as cron_activo
 			FROM cron_tareas b
 			LEFT JOIN (SELECT * FROM (SELECT * FROM cron_logs ORDER BY id_cronjob ASC, inicio DESC) AS tbl_unicos GROUP BY tbl_unicos.id_cronjob) a ON a.id_cronjob=b.id_cronjob
-			WHERE 1 AND IFNULL(a.estatus,'TERMINADO')='TERMINADO' $filtro
+			WHERE 1 /*AND IFNULL(a.estatus,'TERMINADO')='TERMINADO'*/ $filtro
 			;";
 	$resultado = SQLQuery($sql);
 	$resultado = (count($resultado)) ? $resultado : false ;
