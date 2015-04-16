@@ -133,7 +133,9 @@ function execute_cronjob($id_cronjob=false){
 		case 'PHP':	$ejecuta = 'php '.$data[ejecuta];
 					break;
 		case 'LINUX': $ejecuta = 'sh '.$data[ejecuta];
-					break;		
+					break;	
+		case 'CURL': $ejecuta = 'curl '.$data[ejecuta];
+					break;	
 		default: unset($ejecuta); break;
 	}	
 	// Verifica vigencia del cronjob
