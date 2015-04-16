@@ -128,11 +128,11 @@ function execute_cronjob($id_cronjob=false){
 	$path = $parms[cron_paths];
 	$sqlData = array(id_cronjob => $id_cronjob);
 	$data = sql_select_cron_tareas($sqlData);
-	$data[ejecuta] = $path.$data[ejecuta];
+	// $data[ejecuta] = $path.$data[ejecuta];
 	switch ($data[tipo]) {
-		case 'PHP':	$ejecuta = 'php '.$data[ejecuta];
+		case 'PHP':	$ejecuta = 'php '.$path.$data[ejecuta];
 					break;
-		case 'LINUX': $ejecuta = 'sh '.$data[ejecuta];
+		case 'LINUX': $ejecuta = 'sh '.$path.$data[ejecuta];
 					break;	
 		case 'CURL': $ejecuta = 'curl '.$data[ejecuta];
 					break;	
