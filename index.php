@@ -25,7 +25,7 @@ if($parms[cronjobs]){
 	switch (strtolower($v_a)) {
 		case 'tbl':
 			echo "<h3>Cronjobs: ".$t_entrada.'</h3>'."<hr/>";
-			echo table_cron_tareas();
+			echo table_cronjob_estatus();
 			break;
 		case 'exe':
 			execute_cron_tareas();
