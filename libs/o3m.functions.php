@@ -5,7 +5,7 @@
 * Modificación:	2015-04-15
 * @author		Oscar Maldonado - O3M
 */
-require_once("libs/inc.mysqli.php");
+require_once($parms[root_path]."libs/inc.mysqli.php");
 ##################
 #Funciones comunes
 ##################
@@ -86,13 +86,24 @@ function execute_cronjob($id_cronjob=false){
 		case 'LINUX': $ejecuta = 'sh '.$data[ejecuta];
 					break;		
 		default: unset($ejecuta); break;
-	}		
-	##TODO: Validación de fechas para ejecucion
+	}	
+	// Verifica vigencia del cronjob
+	$sqlData = array(id_cronjob => $data[id_cronjob]);
+	$dataCron = sql_select_verifica_cron($sqlData);
+	if($dataCron[cron_iniciado] && $dataCron[cron_vigente] && $dataCron[excedido_minutos]>=$parms[cron_excede]){
 		// Comienza ejecución
 		$t_ini = date("Y-m-d H:i:s");
+		// Log en BD - Inserta registro en logs
+		if($parms[log_db]){
+			$sqlData = array(
+				 id_cronjob => $data[id_cronjob]
+				,inicio 	=> $t_ini				
+			);
+			$id_cron_log = sql_insert_cron_logs($sqlData);
+		}
 		ob_start();
 		passthru($ejecuta, $err); #Ejecuta script
-		$success = (!$err)?ob_get_contents():'ERROR al ejecutar comando: <'.$ejecuta.'>';
+		$respuesta = (!$err)?ob_get_contents():'ERROR al ejecutar comando: <'.$ejecuta.'>';
 		ob_end_clean();
 		// Termina ejecución
 		$t_fin = date("Y-m-d H:i:s");
@@ -102,25 +113,26 @@ function execute_cronjob($id_cronjob=false){
 			$logtxt .= 'ID_CRONJOB: '.$data[id_cronjob];
 			$logtxt .= ' | NOMBRE: '.$data[cron_nombre];
 			$logtxt .= ' | ARCHIVO: '.$data[ejecuta];
-			$logtxt .= $s.'Tarea iniciada: '.$t_ini.$s.'Respuesta: '.$success.$s.'Tarea finalizada: '.$t_fin;
+			$logtxt .= $s.'Tarea iniciada: '.$t_ini.$s.'Respuesta: '.$respuesta.$s.'Tarea finalizada: '.$t_fin;
 			$logs = logs_txt($logtxt);
 		}
-		// Log en BD
+		// Log en BD - Actualiza log con datos de ejecución
 		if($parms[log_db]){
 			$sqlData = array(
-				 id_cronjob => $data[id_cronjob]
-				,inicio 	=> $t_ini
+				 id_cron_log=> $id_cron_log
 				,fin 		=> $t_fin
-				,respuesta  => $success
+				,respuesta  => $respuesta
 			);
-			$success = (sql_insert_cron_logs($sqlData))?true:false;
+			$success = (sql_update_cron_logs($sqlData))?true:false;
 		}
+	}
 	return $success;
 }
 
 function logs_txt($contenido=''){
 // Crea un archivo txt con la fecha de ejecución
-	$ruta = 'logs/';
+	global $parms;
+	$ruta = $parms[root_path].'logs/';
 	$contenido = date("Y-m-d H:i:s").' -> '.$contenido."\r\n";
 	$file=fopen($ruta."logs_cronjobs_".date("Ymd").".txt","a+") or die("No se creó el archivo");
   	fputs($file,$contenido);
@@ -133,25 +145,6 @@ function logs_txt($contenido=''){
 ##################
 #Funciones DAO
 ##################
-function sql_insert_cron_logs($data=array()){
-// Inserta un registro con el detalle de la ejecucion de un cronjob
-	$id_cronjob = $data[id_cronjob];
-	$inicio		= $data[inicio];
-	$fin 		= $data[fin];
-	$respuesta  = $data[respuesta];
-	$timestamp 	= date("Y-m-d H:i:s");
-	$sql = "INSERT INTO cron_logs SET 
-			id_cronjob	= '$id_cronjob',
-			inicio 		= '$inicio',
-			fin 		= '$fin',
-			respuesta 	= '$respuesta',
-			timestamp 	= '$timestamp'
-			;";
-	$resultado = SQLDo($sql);
-	$resultado = (count($resultado)) ? $resultado : false ;
-	return $resultado;
-}
-
 function sql_select_cron_tareas($data=array()){
 // Listado de tabla cron_tareas
 	$id_cronjob = $data[id_cronjob];
@@ -161,6 +154,124 @@ function sql_select_cron_tareas($data=array()){
 	$resultado = (count($resultado)) ? $resultado : false ;
 	return $resultado;
 }
+
+function sql_insert_cron_logs($data=array()){
+// Inserta un registro con el detalle de la ejecucion de un cronjob
+	$id_cronjob = $data[id_cronjob];
+	$inicio		= $data[inicio];
+	$fin 		= $data[fin];
+	$respuesta  = $data[respuesta];
+	$estatus 	= 'EJECUTANDO';
+	$timestamp 	= date("Y-m-d H:i:s");
+	$sql = "INSERT INTO cron_logs SET 
+			id_cronjob	= '$id_cronjob',
+			estatus 	= '$estatus',
+			inicio 		= '$inicio',
+			/*fin 		= '$fin',
+			respuesta 	= '$respuesta',*/			
+			timestamp 	= '$timestamp'
+			;";
+	$resultado = SQLDo($sql);
+	$resultado = (count($resultado)) ? $resultado : false ;	
+	return $resultado;
+}
+
+function sql_update_cron_logs($data=array()){
+// Inserta un registro con el detalle de la ejecucion de un cronjob
+	$id_cron_log= $data[id_cron_log];
+	$id_cronjob = $data[id_cronjob];
+	$fin 		= $data[fin];
+	$respuesta  = $data[respuesta];
+	$estatus 	= 'TERMINADO';
+	$sql = "UPDATE cron_logs SET 	
+			estatus 	= '$estatus',
+			fin 		= '$fin',
+			respuesta 	= '$respuesta'
+			WHERE id_cron_log='$id_cron_log'
+			;";
+	$resultado = SQLDo($sql);
+	$resultado = (count($resultado)) ? $resultado : false ;
+	return $resultado;
+}
+
+function sql_select_verifica_cron($data=array()){
+// Listado de tabla cron_tareas
+	$id_cronjob = $data[id_cronjob];
+	$filtro .= ($id_cronjob)?" AND a.id_cronjob='$id_cronjob'":'';
+	$sql = "SELECT 
+				 a.id_cron_log
+				,a.id_cronjob
+				,b.cron_nombre
+				,b.ejecuta
+				,b.inicio_fecha
+				,b.inicio_hora
+				,CONCAT(b.inicio_fecha,' ',b.inicio_hora) as inicio_tiempo
+				,b.fin_fecha
+				,b.fin_hora
+				,CONCAT(b.fin_fecha,' ',b.fin_hora) as fin_tiempo
+				,b.ejecucion_tipo
+				,b.ejecucion_valor
+				,IF(b.ejecucion_tipo='MINUTOS',IFNULL(b.ejecucion_valor,0)*60,0) 
+				+IF(b.ejecucion_tipo='HORAS',IFNULL(b.ejecucion_valor,0)*60*60,0) 
+				+IF(b.ejecucion_tipo='DIAS',IFNULL(b.ejecucion_valor,0)*60*60*24,0) AS ejecucion_segundos
+				,TRUNCATE((IF(b.ejecucion_tipo='MINUTOS',IFNULL(b.ejecucion_valor,0)*60,0) 
+				+IF(b.ejecucion_tipo='HORAS',IFNULL(b.ejecucion_valor,0)*60*60,0) 
+				+IF(b.ejecucion_tipo='DIAS',IFNULL(b.ejecucion_valor,0)*60*60*24,0))/60,0) AS ejecucion_minutos
+				,TIME_FORMAT(SEC_TO_TIME(IF(b.ejecucion_tipo='MINUTOS',IFNULL(b.ejecucion_valor,0)*60,0) 
+				+IF(b.ejecucion_tipo='HORAS',IFNULL(b.ejecucion_valor,0)*60*60,0) 
+				+IF(b.ejecucion_tipo='DIAS',IFNULL(b.ejecucion_valor,0)*60*60*24,0)),'%H:%i') AS ejecucion_tiempo
+				,a.estatus
+				,a.inicio
+				,a.fin
+				,a.respuesta
+				,a.timestamp
+				,(a.inicio
+					+
+					INTERVAL (
+						TRUNCATE(
+							(IF(b.ejecucion_tipo='MINUTOS',IFNULL(b.ejecucion_valor,0)*60,0) 
+							+IF(b.ejecucion_tipo='HORAS',IFNULL(b.ejecucion_valor,0)*60*60,0) 
+							+IF(b.ejecucion_tipo='DIAS',IFNULL(b.ejecucion_valor,0)*60*60*24,0))/60,0
+						)
+					) MINUTE
+				) as proxima_ejecucion
+				,NOW() as ahora
+				,TIMEDIFF(NOW(),
+					(a.inicio
+						+
+						INTERVAL (
+							TRUNCATE(
+								(IF(b.ejecucion_tipo='MINUTOS',IFNULL(b.ejecucion_valor,0)*60,0) 
+								+IF(b.ejecucion_tipo='HORAS',IFNULL(b.ejecucion_valor,0)*60*60,0) 
+								+IF(b.ejecucion_tipo='DIAS',IFNULL(b.ejecucion_valor,0)*60*60*24,0))/60,0
+							)
+						) MINUTE
+					)
+				) as excedido_tiempo
+				,TIME_TO_SEC(TIMEDIFF(NOW(),
+					(a.inicio
+						+
+						INTERVAL (
+							TRUNCATE(
+								(IF(b.ejecucion_tipo='MINUTOS',IFNULL(b.ejecucion_valor,0)*60,0) 
+								+IF(b.ejecucion_tipo='HORAS',IFNULL(b.ejecucion_valor,0)*60*60,0) 
+								+IF(b.ejecucion_tipo='DIAS',IFNULL(b.ejecucion_valor,0)*60*60*24,0))/60,0
+							)
+						) MINUTE
+					)
+				))/60 as excedido_minutos
+			,IF(NOW()>=CONCAT(b.inicio_fecha,' ',b.inicio_hora),1,0) as cron_iniciado
+			,IF(a.fin<=CONCAT(b.fin_fecha,' ',b.fin_hora),1,0) as cron_vigente
+			,b.activo as cron_activo
+			FROM (SELECT * FROM (SELECT * FROM cron_logs ORDER BY id_cronjob ASC, inicio DESC) AS tbl_unicos GROUP BY tbl_unicos.id_cronjob) AS a 
+			LEFT JOIN cron_tareas b ON a.id_cronjob=b.id_cronjob
+			WHERE 1 AND a.estatus='TERMINADO' $filtro
+			;";
+	$resultado = SQLQuery($sql);
+	$resultado = (count($resultado)) ? $resultado : false ;
+	return $resultado;
+}
+
 #-FIN DAO-#
 
 /*O3M*/
