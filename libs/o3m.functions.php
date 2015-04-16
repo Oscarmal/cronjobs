@@ -24,7 +24,8 @@ function dump_var($variable,$tipo=0){
 
 function table_cronjob_estatus(){
 // Muestra tabla con cronjobs activos en la tabla cron_tareas
-	$datos = sql_select_verifica_cron();
+	$sqlData = array(activo => 1);
+	$datos = sql_select_verifica_cron($sqlData);
 	$tbl_resultados .= '<table border="1">';
 	$tbl_resultados .= '
 		<thead>
@@ -56,16 +57,20 @@ function table_cronjob_estatus(){
 			<th>cron_vigente</th>
 			<th>cron_activo</th>
 		</thead>';
-	foreach($datos as $registro){
-		$tbl_resultados .= '<tr>';
-		$soloUno = (!is_array($registro))?true:false; 
-		$data = (!$soloUno)?$registro:$datos; 
-		// Dibuja tabla
-		for($i=0; $i<count($data)/2; $i++){
-			$tbl_resultados .= '<td>'.$data[$i].'</td>';
-		}	
-		if($soloUno) break;
-		$tbl_resultados .= '</tr>';				
+	if(is_array($datos[1]) || !empty($datos[1])){
+		foreach($datos as $registro){
+			$tbl_resultados .= '<tr>';
+			$soloUno = (!is_array($registro))?true:false; 
+			$data = (!$soloUno)?$registro:$datos; 
+			// Dibuja tabla
+			for($i=0; $i<count($data)/2; $i++){
+				$tbl_resultados .= '<td>'.$data[$i].'</td>';
+			}	
+			if($soloUno) break;
+			$tbl_resultados .= '</tr>';				
+		}
+	}else{
+		$tbl_resultados .= '<tr><td colspan="28">Sin cronjobs activos...</td></tr>';	
 	}
 	$tbl_resultados .= '</table>';
 	$tbl_resultados .= '<a href="#" onclick="location.reload();">Actualizar</a>';
@@ -250,8 +255,10 @@ function sql_select_verifica_cron($data=array()){
 // Listado de tabla cron_tareas
 	$id_cronjob = $data[id_cronjob];
 	$estatus = $data[estatus];
+	$activo = $data[activo];
 	$filtro .= ($id_cronjob)?" AND b.id_cronjob='$id_cronjob'":'';
 	$filtro .= ($estatus)?" AND a.estatus='$estatus'":'';
+	$filtro .= ($activo)?" AND b.activo='$activo'":'';
 	$sql = "SELECT 
 				 a.id_cron_log
 				,b.id_cronjob
@@ -323,7 +330,7 @@ function sql_select_verifica_cron($data=array()){
 			LEFT JOIN (SELECT * FROM (SELECT * FROM cron_logs ORDER BY id_cronjob ASC, inicio DESC) AS tbl_unicos GROUP BY tbl_unicos.id_cronjob) a ON a.id_cronjob=b.id_cronjob
 			WHERE 1 /*AND IFNULL(a.estatus,'TERMINADO')='TERMINADO'*/ $filtro
 			;";
-	$resultado = SQLQuery($sql);
+	$resultado = SQLQuery($sql);		
 	$resultado = (count($resultado)) ? $resultado : false ;
 	return $resultado;
 }
