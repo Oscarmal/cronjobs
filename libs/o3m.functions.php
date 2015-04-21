@@ -133,21 +133,21 @@ function execute_cronjob($id_cronjob=false){
 	$path = $parms[cron_paths];
 	$sqlData = array(id_cronjob => $id_cronjob);
 	$data = sql_select_cron_tareas($sqlData);
-	// $data[ejecuta] = $path.$data[ejecuta];
 	switch ($data[tipo]) {
-		case 'PHP':	$ejecuta = 'php '.$path.$data[ejecuta];
+		case 'PHP':			$ejecuta = 'php '.$path.$data[ejecuta];
 					break;
-		case 'LINUX': $ejecuta = 'sh '.$path.$data[ejecuta];
+		case 'LINUX-SH': 	$ejecuta = 'sh '.$path.$data[ejecuta];
 					break;	
-		case 'CURL': $ejecuta = 'curl '.$data[ejecuta];
+		case 'LINUX-BASH': 	$ejecuta = 'bash '.$path.$data[ejecuta];
+					break;
+		case 'CURL': 		$ejecuta = 'curl '.$data[ejecuta];
 					break;	
 		default: unset($ejecuta); break;
 	}	
 	// Verifica vigencia del cronjob
-/*TODO: revisar estatus EJECUTANDO */
 	$sqlData = array(id_cronjob => $data[id_cronjob], estatus => 'TERMINADO');
 	$dataCron = sql_select_verifica_cron($sqlData);
-	if($dataCron[cron_iniciado] && $dataCron[cron_vigente] && $dataCron[excedido_minutos]>=$parms[cron_excede]){
+	if($dataCron[cron_iniciado] && $dataCron[cron_vigente] && ceil($dataCron[excedido_minutos])>=$parms[cron_excede]){
 		// Comienza ejecución
 		$t_ini = date("Y-m-d H:i:s");
 		// Log en BD - Inserta registro en logs
@@ -182,7 +182,7 @@ function execute_cronjob($id_cronjob=false){
 			);
 			$success = (sql_update_cron_logs($sqlData))?true:false;
 		}
-	}
+	}#else{ $success="No";}
 	return $success;
 }
 
@@ -257,7 +257,7 @@ function sql_select_verifica_cron($data=array()){
 	$estatus = $data[estatus];
 	$activo = $data[activo];
 	$filtro .= ($id_cronjob)?" AND b.id_cronjob='$id_cronjob'":'';
-	$filtro .= ($estatus)?" AND a.estatus='$estatus'":'';
+	$filtro .= ($estatus)?" AND (a.estatus='$estatus' OR a.estatus IS NULL)":'';
 	$filtro .= ($activo)?" AND b.activo='$activo'":'';
 	$sql = "SELECT 
 				 a.id_cron_log
@@ -289,11 +289,13 @@ function sql_select_verifica_cron($data=array()){
 				,(IFNULL(a.inicio,NOW())
 					+
 					INTERVAL (
-						TRUNCATE(
-							(IF(b.ejecucion_tipo='MINUTOS',IFNULL(b.ejecucion_valor,0)*60,0) 
-							+IF(b.ejecucion_tipo='HORAS',IFNULL(b.ejecucion_valor,0)*60*60,0) 
-							+IF(b.ejecucion_tipo='DIAS',IFNULL(b.ejecucion_valor,0)*60*60*24,0))/60,0
-						)
+						IF(a.inicio IS NOT NULL,
+							TRUNCATE(
+								(IF(b.ejecucion_tipo='MINUTOS',IFNULL(b.ejecucion_valor,0)*60,0) 
+								+IF(b.ejecucion_tipo='HORAS',IFNULL(b.ejecucion_valor,0)*60*60,0) 
+								+IF(b.ejecucion_tipo='DIAS',IFNULL(b.ejecucion_valor,0)*60*60*24,0))/60,0
+							)
+						,0)
 					) MINUTE
 				) as proxima_ejecucion
 				,NOW() as ahora
@@ -330,6 +332,7 @@ function sql_select_verifica_cron($data=array()){
 			LEFT JOIN (SELECT * FROM (SELECT * FROM cron_logs ORDER BY id_cronjob ASC, inicio DESC) AS tbl_unicos GROUP BY tbl_unicos.id_cronjob) a ON a.id_cronjob=b.id_cronjob
 			WHERE 1 /*AND IFNULL(a.estatus,'TERMINADO')='TERMINADO'*/ $filtro
 			;";
+	// dump_var($sql);
 	$resultado = SQLQuery($sql);		
 	$resultado = (count($resultado)) ? $resultado : false ;
 	return $resultado;
